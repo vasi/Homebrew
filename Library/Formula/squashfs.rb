@@ -3,23 +3,51 @@ require 'formula'
 class Squashfs < Formula
   homepage 'http://squashfs.sourceforge.net/'
   url 'http://sourceforge.net/projects/squashfs/files/squashfs/squashfs4.0/squashfs4.0.tar.gz'
-  md5 'a3c23391da4ebab0ac4a75021ddabf96'
+  sha256 '18948edbe06bac2c4307eea99bfb962643e4b82e5b7edd541b4d743748e12e21'
+
+  head 'https://git.kernel.org/pub/scm/fs/squashfs/squashfs-tools.git'
+
+  if ARGV.include? '--extra-format-support' and ARGV.build_head?
+    depends_on 'lzo'
+    depends_on 'xz'
+  end
+
+  def options
+    [
+      ['--extra-format-support', "Enables support for LZO and XZ formats. Only when building from HEAD."]
+    ]
+  end
 
   fails_with :clang do
     build 318
   end
 
   def patches
-   { :p0 => DATA }
+    if ARGV.build_head?
+      %w[
+        https://github.com/vasi/squashfs-tools/commit/695811dd120634d21391086684405b6178f2a046.patch
+        https://github.com/vasi/squashfs-tools/commit/a90339f9aa08702ff6640b7de8300527f6a1d5bc.patch
+        https://github.com/vasi/squashfs-tools/commit/45c40c7d8fe6b8b61458fa33cc28c069173bd45f.patch
+        https://github.com/vasi/squashfs-tools/commit/c43950771a0128b46684862831c709e117baef1b.patch
+        https://github.com/vasi/squashfs-tools/commit/a357ed71967daba52220fe43481b93dd4af9334f.patch
+        https://github.com/vasi/squashfs-tools/commit/89f28dea697ead3ce0d418feb85b398b66e62e1f.patch
+      ]
+    else
+      { :p0 => DATA }
+    end
   end
 
   def install
     cd 'squashfs-tools' do
-      system "make"
+      if ARGV.include? '--extra-format-support' and ARGV.build_head?
+        system "make LZO_SUPPORT=1 LZO_DIR='#{HOMEBREW_PREFIX}' XZ_SUPPORT=1 XZ_DIR='#{HOMEBREW_PREFIX}'"
+      else
+        system "make"
+      end
       bin.install %w{mksquashfs unsquashfs}
     end
 
-    doc.install %w{ACKNOWLEDGEMENTS CHANGES COPYING INSTALL OLD-READMEs PERFORMANCE.README README README-4.0}
+    doc.install %w{ACKNOWLEDGEMENTS CHANGES COPYING INSTALL OLD-READMEs PERFORMANCE.README README README-4.0} unless ARGV.build_head?
   end
 end
 
