@@ -2,8 +2,8 @@ require 'formula'
 
 class Squashfs < Formula
   homepage 'http://squashfs.sourceforge.net/'
-  url 'http://sourceforge.net/projects/squashfs/files/squashfs/squashfs4.0/squashfs4.0.tar.gz'
-  sha256 '18948edbe06bac2c4307eea99bfb962643e4b82e5b7edd541b4d743748e12e21'
+  url 'http://sourceforge.net/projects/squashfs/files/squashfs/squashfs4.2/squashfs4.2.tar.gz'
+  sha256 'd9e0195aa922dbb665ed322b9aaa96e04a476ee650f39bbeadb0d00b24022e96'
 
   head 'https://git.kernel.org/pub/scm/fs/squashfs/squashfs-tools.git'
 
@@ -39,7 +39,9 @@ class Squashfs < Formula
 
   def install
     cd 'squashfs-tools' do
-      if ARGV.include? '--extra-format-support' and ARGV.build_head?
+      if !ARGV.build_head?
+        system "make XATTR_SUPPORT=0 EXTRA_CFLAGS=-std=gnu89"
+      elsif ARGV.include? '--extra-format-support'
         system "make LZO_SUPPORT=1 LZO_DIR='#{HOMEBREW_PREFIX}' XZ_SUPPORT=1 XZ_DIR='#{HOMEBREW_PREFIX}'"
       else
         system "make"
@@ -47,7 +49,7 @@ class Squashfs < Formula
       bin.install %w{mksquashfs unsquashfs}
     end
 
-    doc.install %w{ACKNOWLEDGEMENTS CHANGES COPYING INSTALL OLD-READMEs PERFORMANCE.README README README-4.0} unless ARGV.build_head?
+    doc.install %w{ACKNOWLEDGEMENTS CHANGES COPYING INSTALL OLD-READMEs PERFORMANCE.README README README-4.2} unless ARGV.build_head?
   end
 end
 
@@ -73,14 +75,15 @@ Only in squashfs-tools: mksquashfs.c.orig
 diff -u squashfs-tools.orig/unsquashfs.c squashfs-tools/unsquashfs.c
 --- squashfs-tools.orig/unsquashfs.c	2009-04-05 14:23:06.000000000 -0700
 +++ squashfs-tools/unsquashfs.c	2011-11-17 17:51:44.000000000 -0800
-@@ -21,6 +21,7 @@
-  * unsquashfs.c
-  */
+@@ -29,7 +29,7 @@
+ #include "compressor.h"
+ #include "xattr.h"
  
+-#include <sys/sysinfo.h>
 +#include <sys/sysctl.h>
- #include "unsquashfs.h"
- #include "squashfs_swap.h"
- #include "squashfs_compat.h"
+ #include <sys/types.h>
+ 
+ struct cache *fragment_cache, *data_cache;
 @@ -1195,7 +1196,7 @@
  			int match = use_regex ?
  				regexec(path->name[i].preg, name, (size_t) 0,
